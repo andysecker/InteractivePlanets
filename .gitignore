@@ -1,0 +1,14 @@
+Agents.md
+handoff.md
+*.class
+target/
+.idea/
+.settings/
+.classpath
+.project
+*.iml
+*.log
+*.tmp
+*.swp
+*.swo
+.DS_Store
