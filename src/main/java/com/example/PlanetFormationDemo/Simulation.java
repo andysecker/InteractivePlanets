@@ -38,6 +38,10 @@ public class Simulation {
     private boolean autoCometsEnabled = true;
 
     public Simulation(int width, int height) {
+        this(width, height, true);
+    }
+
+    public Simulation(int width, int height, boolean seedDust) {
         this.width = width;
         this.height = height;
         this.gridCols = width / CELL_SIZE + 2;
@@ -46,7 +50,11 @@ public class Simulation {
         for (int i = 0; i < gridCols * gridRows; i++) {
             grid.add(new ArrayList<>(24));
         }
-        initBodies();
+        if (seedDust) {
+            initBodies();
+        } else {
+            initSunOnly();
+        }
     }
 
     public void addListener(SimulationListener l) {
@@ -109,6 +117,19 @@ public class Simulation {
             float vy = (float) (Math.cos(angle) * speed) * tangentialScale + (random.nextFloat() - 0.5f) * 0.12f;
             addBody(x, y, vx, vy, mass, false);
         }
+    }
+
+    private void initSunOnly() {
+        bodies.clear();
+        Body sun = new Body();
+        sun.x = width / 2f;
+        sun.y = height / 2f;
+        sun.mass = 1_200_000f;
+        sun.radius = 26f;
+        sun.color = new java.awt.Color(255, 160, 40);
+        sun.isSun = true;
+        sun.particleCount = 0;
+        bodies.add(sun);
     }
 
     public void resetForSize(int w, int h) {
