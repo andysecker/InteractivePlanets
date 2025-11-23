@@ -10,8 +10,19 @@ import java.util.function.BooleanSupplier;
  * Toolbar of buttons/toggles for simulation controls.
  */
 public class ControlBar extends JPanel {
+    /** Button reflecting auto-comet on/off state. */
     private final JButton toggleComets;
 
+    /**
+     * Construct toolbar wiring callbacks to the simulation.
+     *
+     * @param onTool         consumer to switch the active tool
+     * @param onComet        action to spawn a user comet
+     * @param onShake        action to shake the disk
+     * @param onCleanup      action to clear stray dust
+     * @param onToggleComets toggle auto-comet behavior
+     * @param autoState      provider reporting current auto-comet state
+     */
     public ControlBar(Consumer<ToolMode> onTool, Runnable onComet, Runnable onShake,
                       Runnable onCleanup, Runnable onToggleComets, BooleanSupplier autoState) {
         super(new FlowLayout(FlowLayout.LEFT, 8, 4));
@@ -43,6 +54,9 @@ public class ControlBar extends JPanel {
         add(toggleComets);
     }
 
+    /**
+     * Update the auto-comet button label to reflect current state.
+     */
     public void updateCometLabel(boolean enabled) {
         toggleComets.setText("Auto comets: " + (enabled ? "ON" : "OFF"));
     }

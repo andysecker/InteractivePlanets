@@ -8,13 +8,23 @@ import java.awt.BorderLayout;
  * Thin UI shell wiring together simulation, rendering, input, captions, and sounds.
  */
 public class PlanetFormationDemo {
+    /** Simulation instance (seeded after UI shows). */
     private Simulation simulation;
+    /** Caption manager for kid-friendly text. */
     private CaptionManager captions;
+    /** Sound manager for simple cues. */
     private SoundManager sounds;
+    /** Shared tool state. */
     private final ToolModeHolder toolHolder = new ToolModeHolder();
 
+    /** Entry point wiring the UI and deferring heavy seeding to background. */
     public PlanetFormationDemo() {}
 
+    /**
+     * Show the main window immediately, then seed the simulation in the background.
+     * Keeps the UI responsive by creating the frame and sun instantly, then rebuilding
+     * once the layout and screen size are known.
+     */
     private void showUI() {
         JFrame frame = new JFrame("Planet Formation Demo");
         frame.setLayout(new BorderLayout());
@@ -78,6 +88,11 @@ public class PlanetFormationDemo {
         }).start();
     }
 
+    /**
+     * Build the toolbar and wire the callbacks into the simulation/tool holder.
+     *
+     * @return configured ControlBar ready for placement in the frame
+     */
     private ControlBar buildToolbar() {
         ControlBar bar = new ControlBar(
                 toolHolder::set,
@@ -91,6 +106,7 @@ public class PlanetFormationDemo {
         return bar;
     }
 
+    /** Launch the demo. */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new PlanetFormationDemo().showUI());
     }

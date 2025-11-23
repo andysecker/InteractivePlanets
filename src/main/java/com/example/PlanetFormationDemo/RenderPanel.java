@@ -12,22 +12,34 @@ import java.awt.RenderingHints;
  * Renders simulation snapshots with HUD and view-only zoom.
  */
 public class RenderPanel extends JPanel {
+    /** Source simulation to sample snapshots from. */
     private final Simulation simulation;
+    /** Provides rotating story captions. */
     private final CaptionManager captions;
+    /** Supplies the currently active tool for HUD display. */
     private final ToolModeProvider toolProvider;
+    /** Supplies HUD state (auto-comet flag). */
     private final HudInfoProvider hudProvider;
+    /** Base HUD font. */
     private final Font hudFont = new Font("SansSerif", Font.BOLD, 14);
+    /** View zoom factor (render-only). */
     private float zoomFactor = 1.0f;
 
+    /** Clamp helper. */
     private float clamp(float val, float min, float max) {
         if (val < min) return min;
         if (val > max) return max;
         return val;
     }
 
+    /** Accessor for the active tool. */
     public interface ToolModeProvider { ToolMode currentTool(); }
+    /** Accessor for HUD booleans. */
     public interface HudInfoProvider { boolean autoComets(); }
 
+    /**
+     * Construct a render panel bound to a simulation and HUD providers.
+     */
     public RenderPanel(Simulation simulation, CaptionManager captions,
                        ToolModeProvider toolProvider, HudInfoProvider hudProvider) {
         this.simulation = simulation;
@@ -49,6 +61,9 @@ public class RenderPanel extends JPanel {
         });
     }
 
+    /**
+     * Draw the current simulation snapshot with HUD overlays and zoom transform.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

@@ -14,33 +14,62 @@ import java.util.stream.IntStream;
  * Physics + game state; produces snapshots and events for rendering/UI.
  */
 public class Simulation {
+    /** Gravity constant for the sun. */
     private static final float G = 0.0008f;
+    /** Softening to avoid singular pull near the sun. */
     private static final float GRAVITY_SOFTENING = 3000f;
+    /** Global drag to keep the disk bounded. */
     private static final float DRAG = 0.9999f;
+    /** Collision grid cell size. */
     private static final int CELL_SIZE = 12;
+    /** Scale for planet-planet gravity perturbations. */
     private static final float PLANET_GRAVITY_SCALE = 0.18f;
+    /** How many massive bodies to consider for mutual gravity. */
     private static final int MAX_GIANTS = 16;
 
+    /** Current view width/height. */
     private int width;
     private int height;
+    /** Bodies managed by the simulation. */
     private final List<Body> bodies = new ArrayList<>();
+    /** Collision grid cells. */
     private final List<List<Body>> grid;
+    /** Number of grid columns. */
     private final int gridCols;
+    /** Number of grid rows. */
     private final int gridRows;
+    /** Random source used throughout the simulation. */
     private final Random random = new Random();
+    /** Event listeners (captions, sounds). */
     private final CopyOnWriteArrayList<SimulationListener> listeners = new CopyOnWriteArrayList<>();
 
+    /** Run flag for the physics loop. */
     private volatile boolean running = false;
+    /** Physics executor. */
     private ExecutorService physicsExecutor;
+    /** Scheduler for auto-comets. */
     private ScheduledExecutorService scheduler;
+    /** Cooldown for merge chimes. */
     private long lastMergeChimeMs = 0L;
+    /** Tick counter for periodic checks. */
     private int physicsTick = 0;
+    /** Auto-comet toggle. */
     private boolean autoCometsEnabled = true;
 
+    /**
+     * Create a simulation sized to the given viewport and seed dust by default.
+     */
     public Simulation(int width, int height) {
         this(width, height, true);
     }
 
+    /**
+     * Create a simulation with optional dust seeding.
+     *
+     * @param width    target viewport width
+     * @param height   target viewport height
+     * @param seedDust whether to populate the disk immediately
+     */
     public Simulation(int width, int height, boolean seedDust) {
         this.width = width;
         this.height = height;
@@ -57,10 +86,16 @@ public class Simulation {
         }
     }
 
+    /**
+     * Subscribe to simulation events.
+     */
     public void addListener(SimulationListener l) {
         listeners.add(l);
     }
 
+    /**
+     * Start the physics loop and scheduler threads.
+     */
     public void start() {
         if (running) return;
         running = true;
@@ -70,12 +105,18 @@ public class Simulation {
         scheduleAutoComet();
     }
 
+    /**
+     * Stop all simulation threads.
+     */
     public void stop() {
         running = false;
         if (physicsExecutor != null) physicsExecutor.shutdownNow();
         if (scheduler != null) scheduler.shutdownNow();
     }
 
+    /**
+     * Physics loop running at roughly 60 FPS.
+     */
     private void loop() {
         while (running) {
             long start = System.nanoTime();
@@ -91,6 +132,9 @@ public class Simulation {
         }
     }
 
+    /**
+     * Seed the simulation with the sun plus a dense dust disk.
+     */
     private void initBodies() {
         bodies.clear();
         Body sun = new Body();
@@ -119,6 +163,9 @@ public class Simulation {
         }
     }
 
+    /**
+     * Initialize only the sun; used when seeding in the background.
+     */
     private void initSunOnly() {
         bodies.clear();
         Body sun = new Body();
@@ -132,6 +179,9 @@ public class Simulation {
         bodies.add(sun);
     }
 
+    /**
+     * Reset simulation bodies to a fresh instance sized to the given viewport.
+     */
     public void resetForSize(int w, int h) {
         synchronized (bodies) {
             bodies.clear();
@@ -141,6 +191,9 @@ public class Simulation {
         }
     }
 
+    /**
+     * Create and register a new body.
+     */
     private void addBody(float x, float y, float vx, float vy, float mass, boolean comet) {
         Body b = new Body();
         b.x = x;
@@ -157,6 +210,7 @@ public class Simulation {
         bodies.add(b);
     }
 
+    /** Immutable snapshot for rendering. */
     public SimulationSnapshot snapshot() {
         synchronized (bodies) {
             List<SimulationSnapshot.BodyView> copy = new ArrayList<>(bodies.size());
@@ -170,6 +224,9 @@ public class Simulation {
         }
     }
 
+    /**
+     * Return the heaviest bodies (besides the sun) to approximate mutual gravity.
+     */
     private Body[] topGiants() {
         Body[] top = new Body[MAX_GIANTS];
         float[] masses = new float[MAX_GIANTS];
@@ -189,6 +246,7 @@ public class Simulation {
         return top;
     }
 
+    /** Add a burst of dust near a point with near-circular velocities. */
     public void sprinkleDust(float x, float y, int count) {
         synchronized (bodies) {
             Body sun = bodies.get(0);
@@ -206,6 +264,7 @@ public class Simulation {
         }
     }
 
+    /** Apply a radial push away from a point (wind tool). */
     public void applyWind(float x, float y, float scale) {
         synchronized (bodies) {
             float radius = 200f;
@@ -225,6 +284,7 @@ public class Simulation {
         }
     }
 
+    /** Apply a pull toward a point and optionally sprinkle a few grains (gravity glove). */
     public void applyGravityGlove(float x, float y, float scale, int extraDust) {
         synchronized (bodies) {
             Body sun = bodies.get(0);
@@ -256,6 +316,7 @@ public class Simulation {
         }
     }
 
+    /** Spawn a comet from a screen edge aimed at the sun. */
     public void launchComet() {
         synchronized (bodies) {
             Body sun = bodies.get(0);
@@ -278,6 +339,7 @@ public class Simulation {
         }
     }
 
+    /** Add small random velocity to all bodies (shake). */
     public void shakeDisk() {
         synchronized (bodies) {
             for (int i = 1; i < bodies.size(); i++) {
@@ -288,6 +350,7 @@ public class Simulation {
         }
     }
 
+    /** Remove lightweight dust far from center to declutter. */
     public void cleanUpDust() {
         synchronized (bodies) {
             float cx = width / 2f;
@@ -306,6 +369,7 @@ public class Simulation {
         }
     }
 
+    /** Toggle auto-comet spawning. */
     public void setAutoCometsEnabled(boolean enabled) {
         autoCometsEnabled = enabled;
         if (enabled) {
@@ -313,10 +377,12 @@ public class Simulation {
         }
     }
 
+    /** @return whether auto-comets are active. */
     public boolean isAutoCometsEnabled() {
         return autoCometsEnabled;
     }
 
+    /** Re-seed the system sized to the given view and reset zoom. */
     public void rebuildForSize(int w, int h) {
         synchronized (bodies) {
             this.width = w;
@@ -326,6 +392,7 @@ public class Simulation {
         }
     }
 
+    /** Shift all bodies so the sun is centered in the given view size. */
     public void recenterTo(int targetW, int targetH) {
         synchronized (bodies) {
             this.width = targetW;
@@ -343,6 +410,9 @@ public class Simulation {
         }
     }
 
+    /**
+     * One physics step: gravity, collisions, clean-up, and recenter.
+     */
     private void step() {
         synchronized (bodies) {
             Body sun = bodies.get(0);
@@ -383,16 +453,25 @@ public class Simulation {
         }
     }
 
+    /**
+     * Clear the spatial hash grid before repopulating.
+     */
     private void clearGrid() {
         for (List<Body> cell : grid) cell.clear();
     }
 
+    /**
+     * Place a body into a spatial hash cell.
+     */
     private void bucketBody(Body b) {
         int col = clamp((int) (b.x / CELL_SIZE), 0, gridCols - 1);
         int row = clamp((int) (b.y / CELL_SIZE), 0, gridRows - 1);
         grid.get(row * gridCols + col).add(b);
     }
 
+    /**
+     * Resolve collisions across all grid cells and neighbors.
+     */
     private void resolveCollisions() {
         for (int row = 0; row < gridRows; row++) {
             for (int col = 0; col < gridCols; col++) {
@@ -414,6 +493,9 @@ public class Simulation {
         }
     }
 
+    /**
+     * Check collisions against a neighboring cell.
+     */
     private void checkNeighbor(List<Body> cell, int col, int row) {
         if (col < 0 || col >= gridCols || row < 0 || row >= gridRows) return;
         List<Body> neighbor = grid.get(row * gridCols + col);
@@ -427,6 +509,9 @@ public class Simulation {
         }
     }
 
+    /**
+     * Cheap proximity check for collision detection.
+     */
     private boolean close(Body a, Body b) {
         float dx = b.x - a.x;
         float dy = b.y - a.y;
@@ -434,6 +519,9 @@ public class Simulation {
         return dx * dx + dy * dy <= min * min;
     }
 
+    /**
+     * Merge two bodies into the first, conserving momentum and updating labels.
+     */
     private void mergeIntoFirst(Body a, Body b) {
         float newMass = a.mass + b.mass;
         float newX = (a.x * a.mass + b.x * b.mass) / newMass;
@@ -460,6 +548,9 @@ public class Simulation {
         b.removed = true;
     }
 
+    /**
+     * Remove flagged bodies and keep ordering stable.
+     */
     private void compact() {
         List<Body> keep = new ArrayList<>(bodies.size());
         keep.add(bodies.get(0));
@@ -471,6 +562,9 @@ public class Simulation {
         bodies.addAll(keep);
     }
 
+    /**
+     * Recenters the whole system to keep the sun at the viewport center.
+     */
     private void recenter() {
         Body sun = bodies.get(0);
         float targetX = width / 2f;
@@ -484,6 +578,9 @@ public class Simulation {
         }
     }
 
+    /**
+     * Detect over-dense dust near the star to narrate what is happening.
+     */
     private void checkDenseDust() {
         Body sun = bodies.get(0);
         int dense = 0;
@@ -502,10 +599,16 @@ public class Simulation {
         }
     }
 
+    /**
+     * Convert mass to a render radius.
+     */
     private float radiusForMass(float mass) {
         return (float) Math.max(0.6, 0.4 + Math.cbrt(mass) * 0.55);
     }
 
+    /**
+     * Stage progression based on particle count.
+     */
     private Stage stageForParticles(long particles) {
         if (particles >= 30_000) return Stage.MYSTERY;
         if (particles >= 15_000) return Stage.GARDEN;
@@ -513,6 +616,9 @@ public class Simulation {
         return Stage.ROCK;
     }
 
+    /**
+     * Update stage, color, and naming when a body grows.
+     */
     private void updateStageAndName(Body b) {
         Stage newStage = stageForParticles(b.particleCount);
         if (b.stage != newStage) {
@@ -534,10 +640,16 @@ public class Simulation {
         }
     }
 
+    /**
+     * Determine whether a merge chime should be audible for this collision.
+     */
     private boolean shouldPlayMergeChime(Body a, Body b) {
         return (a.name != null || b.name != null || a.particleCount >= 5_000 || b.particleCount >= 5_000);
     }
 
+    /**
+     * Rate-limit merge chimes to avoid audio spam.
+     */
     private boolean canPlayMergeChime() {
         long now = System.currentTimeMillis();
         if (now - lastMergeChimeMs < 150) return false;
@@ -545,12 +657,16 @@ public class Simulation {
         return true;
     }
 
+    /** Clamp helper. */
     private int clamp(int val, int min, int max) {
         if (val < min) return min;
         if (val > max) return max;
         return val;
     }
 
+    /**
+     * Schedule the next auto-comet if enabled.
+     */
     private void scheduleAutoComet() {
         if (scheduler == null) return;
         scheduler.schedule(() -> {
@@ -561,6 +677,9 @@ public class Simulation {
         }, nextCometDelayMs(), TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Randomized delay for the next comet.
+     */
     private int nextCometDelayMs() {
         return 12_000 + random.nextInt(12_000);
     }

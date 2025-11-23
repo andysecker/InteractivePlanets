@@ -8,18 +8,27 @@ import javax.sound.sampled.SourceDataLine;
  * Minimal sound helper: generates tiny PCM buffers (whoosh/chime) with no external assets.
  */
 public final class Sound {
+    /** Audio sample rate for generated PCM buffers. */
     private static final float SAMPLE_RATE = 44100f;
 
+    /** Utility class; do not instantiate. */
     private Sound() {}
 
+    /**
+     * Play a noise-based whoosh for a comet.
+     */
     public static void playWhoosh(double millis) {
         playBuffer(genNoiseEnvelope(millis));
     }
 
+    /**
+     * Play a sine-based chime for planet merges.
+     */
     public static void playChime(double millis) {
         playBuffer(genSineEnvelope(new double[]{660, 990}, millis));
     }
 
+    /** Create a short decaying noise envelope. */
     private static byte[] genNoiseEnvelope(double ms) {
         int len = (int) (SAMPLE_RATE * ms / 1000.0);
         byte[] buf = new byte[len];
@@ -33,6 +42,7 @@ public final class Sound {
         return buf;
     }
 
+    /** Create a multi-frequency sine envelope. */
     private static byte[] genSineEnvelope(double[] freqs, double ms) {
         int len = (int) (SAMPLE_RATE * ms / 1000.0);
         byte[] buf = new byte[len];
@@ -49,6 +59,7 @@ public final class Sound {
         return buf;
     }
 
+    /** Play the given PCM buffer on a background thread. */
     private static void playBuffer(byte[] data) {
         new Thread(() -> {
             try {
